@@ -43,7 +43,7 @@ help()
 deploy_web()
 {
     if ($IS_VAGRANT); then
-        vagrant ssh web -c "sudo -S apt update && sudo apt install apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y"
+        vagrant ssh web -c "echo $SUDOPASS | sudo -S apt update && sudo apt install apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y"
     else
         echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S apt update && sudo apt install apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y"
     fi
@@ -53,13 +53,13 @@ deploy_bdd()
 {
     if ($IS_VAGRANT); then
         # Install the MariaDB server on the remote machine
-        vagrant ssh bdd -c "sudo -S apt update && sudo apt install mariadb-server -y"
+        vagrant ssh bdd -c "echo $SUDOPASS | sudo -S apt update && sudo apt install mariadb-server -y"
         
         # Allow the remote machine to connect to the database server
-        vagrant ssh bdd -c "sudo -S sed -i 's/bind-address.*/bind-address = 0.0.0.0/' /etc/mysql/mariadb.conf.d/50-server.cnf"
+        vagrant ssh bdd -c "echo $SUDOPASS | sudo -S sed -i 's/bind-address.*/bind-address = 0.0.0.0/' /etc/mysql/mariadb.conf.d/50-server.cnf"
 
         # Find the path of the mysql command
-        MYSQL=$(vagrant ssh bdd -c "sudo -S which mysql")
+        MYSQL=$(vagrant ssh bdd -c "echo $SUDOPASS | sudo -S which mysql")
 
         # SQL commands to create a database, user, and grant privileges
         
@@ -75,7 +75,7 @@ deploy_bdd()
         vagrant ssh bdd -c "echo '$SUDOPASS' | sudo -S mysql -uroot -p'$SUDOPASS' -e \"$SQL\""
 
         # Restart the MariaDB service
-        vagrant ssh bdd -c "sudo systemctl restart mariadb"
+        vagrant ssh bdd -c "echo $SUDOPASS | sudo systemctl restart mariadb"
     else
         # Install the MariaDB server on the remote machine
         echo "$SUDOPASS" | ssh -tt "$BDD_USERNAME@$PUBLIC_BDD_IP" "sudo -S apt update && sudo apt install mariadb-server -y"
@@ -109,20 +109,20 @@ deploy_wordpress()
     
     if ($IS_VAGRANT); then
         # Download and extract the latest version of WordPress
-        vagrant ssh web -c "sudo apt install curl -y && cd /var/www/html/ && sudo curl -O https://wordpress.org/latest.tar.gz && sudo tar -xvf latest.tar.gz && sudo mv wordpress/* . && sudo rm -rf wordpress/ latest.tar.gz index.html"
+        vagrant ssh web -c "echo $SUDOPASS | sudo apt install curl -y && cd /var/www/html/ && sudo curl -O https://wordpress.org/latest.tar.gz && sudo tar -xvf latest.tar.gz && sudo mv wordpress/* . && sudo rm -rf wordpress/ latest.tar.gz index.html"
 
         # Copy the wp-config-sample.php file to wp-config.php
-        vagrant ssh web -c "sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php"
+        vagrant ssh web -c "echo $SUDOPASS | sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php"
 
         # Update the database details in the wp-config.php file
-        vagrant ssh web -c "sudo sed -i 's/database_name_here/$WP_DBNAME/g' /var/www/html/wp-config.php"
-        vagrant ssh web -c "sudo sed -i 's/username_here/$WP_DBUSER/g' /var/www/html/wp-config.php"
-        vagrant ssh web -c "sudo sed -i 's/password_here/$WP_DBPASS/g' /var/www/html/wp-config.php"
-        vagrant ssh web -c "sudo sed -i 's/localhost/$PRIVATE_BDD_IP/g' /var/www/html/wp-config.php"
+        vagrant ssh web -c "echo $SUDOPASS | sudo sed -i 's/database_name_here/$WP_DBNAME/g' /var/www/html/wp-config.php"
+        vagrant ssh web -c "echo $SUDOPASS | sudo sed -i 's/username_here/$WP_DBUSER/g' /var/www/html/wp-config.php"
+        vagrant ssh web -c "echo $SUDOPASS | sudo sed -i 's/password_here/$WP_DBPASS/g' /var/www/html/wp-config.php"
+        vagrant ssh web -c "echo $SUDOPASS | sudo sed -i 's/localhost/$PRIVATE_BDD_IP/g' /var/www/html/wp-config.php"
 
         # Applying folder and file permissions
-        vagrant ssh web -c "sudo chown -R www-data:www-data /var/www/html/"
-        vagrant ssh web -c "sudo chmod -R 755 /var/www/html/"
+        vagrant ssh web -c "echo $SUDOPASS | sudo chown -R www-data:www-data /var/www/html/"
+        vagrant ssh web -c "echo $SUDOPASS | sudo chmod -R 755 /var/www/html/"
 
         # Deploy WP database
         word_press_database
@@ -151,7 +151,7 @@ deploy_wordpress()
 word_press_database()
 {
     if ($IS_VAGRANT); then
-        MYSQL=$(vagrant ssh bdd -c "sudo -S which mysql")
+        MYSQL=$(vagrant ssh bdd -c "echo $SUDOPASS | sudo -S which mysql")
 
         if [ -z "$MYSQL" ]; then
             deploy_bdd
@@ -194,12 +194,12 @@ undo_all_the_work()
     if ($IS_VAGRANT); then
         # WEB & WordPress
         # Remove the packages installed on the web server
-        vagrant ssh web -c "sudo -S apt remove apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y -y && sudo apt autoremove -y && sudo apt autoclean && sudo rm -rf /var/www/html/"
+        vagrant ssh web -c "echo $SUDOPASS | sudo -S apt remove apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y -y && sudo apt autoremove -y && sudo apt autoclean && sudo rm -rf /var/www/html/"
 
 
         # BDD
         # Remove the packages installed on the database server
-        vagrant ssh bdd -c "sudo -S apt remove mariadb-server -y && sudo apt autoremove -y && sudo apt autoclean"
+        vagrant ssh bdd -c "echo $SUDOPASS | sudo -S apt remove mariadb-server -y && sudo apt autoremove -y && sudo apt autoclean"
 
         # Set the bind-address back to 127.0.0.1
         vagrant ssh bdd -c "echo '$SUDOPASS' | sudo -S sed -i 's/bind-address.*/bind-address = 127.0.0.1/' /etc/mysql/mariadb.conf.d/50-server.cnf"
