@@ -20,10 +20,6 @@ MARIADB_PASSWORD="password"
 # Mot de passe pour sudo
 SUDOPASS="root"
 
-# Clé SSH et utilisateur
-SSH_KEY="/path/to/your/private_key"
-USER="your_username"
-
 IS_VAGRANT=true
 DATE=$(date +%Y%m%d)  # Définition de la date
 
@@ -44,17 +40,17 @@ backup_remote() {
 
     else
         # Connexion SSH et accès MySQL à distance
-        ssh -i "$SSH_KEY" "$USER@$PUBLIC_BDD_IP" "echo $SUDOPASS | sudo -S mysql -u$MARIADB_USERNAME -p$MARIADB_PASSWORD -e 'SHOW DATABASES;'"
+        echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_BDD_IP "sudo -S mysql -u$MARIADB_USERNAME -p$MARIADB_PASSWORD -e 'SHOW DATABASES;'"
 
         echo "Connexion SSH et Création de la sauvegarde des machines distantes"
 
         # Création des répertoires et sauvegarde
-        ssh -i "$SSH_KEY" "$USER@$PUBLIC_WEB_IP" "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
-        ssh -i "$SSH_KEY" "$USER@$PUBLIC_BDD_IP" "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
+        echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
+        echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_BDD_IP "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
 
         for dir in "${BACKUP_DIRS[@]}"; do
-            ssh -i "$SSH_KEY" "$USER@$PUBLIC_WEB_IP" "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
-            ssh -i "$SSH_KEY" "$USER@$PUBLIC_BDD_IP" "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
+            echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
+            echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_BDD_IP "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
         done
     fi
 }
