@@ -29,9 +29,15 @@ ssh_jobs()
     ssh-copy-id -i ~/.ssh/id_ed25519.pub $WEB_USERNAME@$PUBLIC_WEB_IP
     ssh-copy-id -i ~/.ssh/id_ed25519.pub $BDD_USERNAME@$PUBLIC_BDD_IP
 
-    # Disable the password authentication on the remote machine and restart the sshd service
-    echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
-    echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_BDD_IP "sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
+    if [ "$IS_VAGRANT" = true ]; then
+        # Disable the password authentication on the remote machine and restart the sshd service
+        vagrant ssh web -c "echo $SUDOPASS | sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
+        vagrant ssh bdd -c "echo $SUDOPASS | sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
+    else
+        # Disable the password authentication on the remote machine and restart the sshd service
+        echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
+        echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_BDD_IP "sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
+    fi
 }
 
 # Helper function to display the usage of the script
@@ -42,7 +48,7 @@ help()
 
 deploy_web()
 {
-    if ($IS_VAGRANT); then
+    if [ "$IS_VAGRANT" = true ]; then
         vagrant ssh web -c "echo $SUDOPASS | sudo -S apt update && sudo apt install apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y"
     else
         echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S apt update && sudo apt install apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y"
@@ -51,7 +57,7 @@ deploy_web()
 
 deploy_bdd()
 {
-    if ($IS_VAGRANT); then
+    if [ "$IS_VAGRANT" = true ]; then
         # Install the MariaDB server on the remote machine
         vagrant ssh bdd -c "echo $SUDOPASS | sudo -S apt update && sudo apt install mariadb-server -y"
         
@@ -107,7 +113,7 @@ deploy_bdd()
 deploy_wordpress()
 {
     
-    if ($IS_VAGRANT); then
+    if [ "$IS_VAGRANT" = true ]; then
         # Download and extract the latest version of WordPress
         vagrant ssh web -c "echo $SUDOPASS | sudo apt install curl -y && cd /var/www/html/ && sudo curl -O https://wordpress.org/latest.tar.gz && sudo tar -xvf latest.tar.gz && sudo mv wordpress/* . && sudo rm -rf wordpress/ latest.tar.gz index.html"
 
@@ -150,7 +156,7 @@ deploy_wordpress()
 
 word_press_database()
 {
-    if ($IS_VAGRANT); then
+    if [ "$IS_VAGRANT" = true ]; then
         MYSQL=$(vagrant ssh bdd -c "echo $SUDOPASS | sudo -S which mysql")
 
         if [ -z "$MYSQL" ]; then
@@ -191,7 +197,7 @@ word_press_database()
 
 undo_all_the_work()
 {
-    if ($IS_VAGRANT); then
+    if [ "$IS_VAGRANT" = true ]; then
         # WEB & WordPress
         # Remove the packages installed on the web server
         vagrant ssh web -c "echo $SUDOPASS | sudo -S apt remove apache2 ghostscript libapache2-mod-php php php-bcmath php-curl php-imagick php-intl php-json php-mbstring php-mysql php-xml php-zip -y -y && sudo apt autoremove -y && sudo apt autoclean && sudo rm -rf /var/www/html/"
