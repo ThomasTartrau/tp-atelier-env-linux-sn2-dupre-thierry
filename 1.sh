@@ -25,15 +25,12 @@ IS_VAGRANT=true
 
 ssh_jobs()
 {
-    # Add the public key to the authorized_keys file on the remote machine
-    ssh-copy-id -i ~/.ssh/id_ed25519.pub $WEB_USERNAME@$PUBLIC_WEB_IP
-    ssh-copy-id -i ~/.ssh/id_ed25519.pub $BDD_USERNAME@$PUBLIC_BDD_IP
+    # Don't need with VAGRANT because the ssh_jobs is naturally executed in Vagrant
+    if [ "$IS_VAGRANT" = false ]; then
+        # Add the public key to the authorized_keys file on the remote machine
+        ssh-copy-id -i ~/.ssh/id_ed25519.pub $WEB_USERNAME@$PUBLIC_WEB_IP
+        ssh-copy-id -i ~/.ssh/id_ed25519.pub $BDD_USERNAME@$PUBLIC_BDD_IP
 
-    if [ "$IS_VAGRANT" = true ]; then
-        # Disable the password authentication on the remote machine and restart the sshd service
-        vagrant ssh web -c "echo $SUDOPASS | sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
-        vagrant ssh bdd -c "echo $SUDOPASS | sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
-    else
         # Disable the password authentication on the remote machine and restart the sshd service
         echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
         echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_BDD_IP "sudo -S sed -i 's/^#\?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
