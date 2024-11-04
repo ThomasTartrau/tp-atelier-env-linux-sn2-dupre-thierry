@@ -13,76 +13,48 @@ BACKUP_DIRS=("/var/www/html" "/var/lib/mysql" "/etc/apache2")
 # Répertoire de sauvegarde
 LOCAL_BACKUP_DIR="/var/backups"
 
-# BDD
+# Informations pour la base de données
 MARIADB_USERNAME="web"
 MARIADB_PASSWORD="password"
 
+# Mot de passe pour sudo
 SUDOPASS="root"
 
-IS_VAGRANT=true
+# Clé SSH et utilisateur
+SSH_KEY="/path/to/your/private_key"
+USER="your_username"
 
+IS_VAGRANT=true
+DATE=$(date +%Y%m%d)  # Définition de la date
 
 backup_remote() {
     if [ "$IS_VAGRANT" = true ]; then
+        # Connexion à la base de données MySQL avec le mot de passe
+        vagrant ssh bdd -c "echo $SUDOPASS | sudo -S mysql -u$MARIADB_USERNAME -p$MARIADB_PASSWORD -e 'SHOW DATABASES;'"
 
-
-        LISTEBDD= vagrant ssh bdd "echo 'show databases' | ${MARIADB_USERNAME} -u backup --password=< ${MARIADB_PASSWORD} >"
-
-        echo "$LISTEBDD"
-
+        # Création des répertoires de sauvegarde sur les serveurs Web et BDD
         vagrant ssh web -c "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
-        vagrant ssh web -c "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $DIR)_^$DATE.tar.gz $DIR"
-
         vagrant ssh bdd -c "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
-        vagrant ssh bdd -c "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $DIR)_^$DATE.tar.gz $DIR"
 
-        # Sauvegarde des répertoires de WEB
-        for dir in ${BACKUP_DIRS[@]}; do
-            vagrant ssh web -c "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $DIR"
+        # Sauvegarde des répertoires pour WEB et BDD
+        for dir in "${BACKUP_DIRS[@]}"; do
+            vagrant ssh web -c "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
+            vagrant ssh bdd -c "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
         done
-
-        # Sauvegarde des répertoires de BDD
-        for dir in ${BACKUP_DIRS[@]}; do
-            vagrant ssh bdd -c "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $DIR"
-        done
-
 
     else
-        LISTEBDD=$( echo 'show databases' | $MARIADB_USERNAME -u backup --password=< $MARIADB_PASSWORD >)
-
-        echo "$LISTEBDD"
+        # Connexion SSH et accès MySQL à distance
+        ssh -i "$SSH_KEY" "$USER@$PUBLIC_BDD_IP" "echo $SUDOPASS | sudo -S mysql -u$MARIADB_USERNAME -p$MARIADB_PASSWORD -e 'SHOW DATABASES;'"
 
         echo "Connexion SSH et Création de la sauvegarde des machines distantes"
 
-        # Création du répertoire de sauvegarde sur WEB
-        ssh -i "$SSH_KEY" "$USER@$WEB" "sudo mkdir -p $LOCAL_BACKUP_DIR"
-        ssh -i "$SSH_KEY" "$USER@$WEB" "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $DIR)_^$DATE.tar.gz $DIR"
+        # Création des répertoires et sauvegarde
+        ssh -i "$SSH_KEY" "$USER@$PUBLIC_WEB_IP" "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
+        ssh -i "$SSH_KEY" "$USER@$PUBLIC_BDD_IP" "echo $SUDOPASS | sudo -S mkdir -p $LOCAL_BACKUP_DIR"
 
-        # Création du répertoire de sauvegarde sur BDD
-        ssh -i "$SSH_KEY" "$USER@$WEB" "sudo mkdir -p $LOCAL_BACKUP_DIR"
-        ssh -i "$SSH_KEY" "$USER@$WEB" "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $DIR)_^$DATE.tar.gz $DIR"
-
-        # Sauvegarde des répertoires de WEB
-        for dir in ${BACKUP_DIRS[@]}; do
-            ssh -i "$SSH_KEY" "$USER@$WEB" "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $DIR"
-        done
-
-        # Sauvegarde des répertoires de BDD
-        for dir in ${BACKUP_DIRS[@]}; do
-            ssh -i "$SSH_KEY" "$USER@$BDD" "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $DIR"
-        done
-
-        echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo mkdir -p $LOCAL_BACKUP_DIR"
-        echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_BDD_IP "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $DIR)_^$DATE.tar.gz $DIR"
-
-        echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_WEB_IP "sudo mkdir -p $LOCAL_BACKUP_DIR"
-        echo $SUDOPASS | ssh -tt $BDD_USERNAME@$PUBLIC_BDD_IP "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $DIR)_^$DATE.tar.gz $DIR"
-
-        for rule in "${web_rules[@]}"; do
-            echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $DIR"
-        done
-        for rule in "${bdd_rules[@]}"; do
-            echo $SUDOPASS | ssh -tt $WEB_USERNAME@$PUBLIC_WEB_IP "sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $DIR"
+        for dir in "${BACKUP_DIRS[@]}"; do
+            ssh -i "$SSH_KEY" "$USER@$PUBLIC_WEB_IP" "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
+            ssh -i "$SSH_KEY" "$USER@$PUBLIC_BDD_IP" "echo $SUDOPASS | sudo -S tar czvf $LOCAL_BACKUP_DIR/$(basename $dir)_$DATE.tar.gz $dir"
         done
     fi
 }
