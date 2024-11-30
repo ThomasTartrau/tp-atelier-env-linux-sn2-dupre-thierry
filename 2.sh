@@ -3,12 +3,18 @@
 # Local ssh public key
 LOCAL_SSH_PUBLIC_KEY="~/.ssh/id_ed25519.pub"
 
+
+help()
+{
+    echo "Usage: ./script.sh [web|bdd]"
+}
+
 Backup_BDD()
 {
-    BDD_MACHINES=$(./get_machines.sh bdd)
-    SUDOPASS=$3
-    MARIADB_USERNAME=$4
-    MARIADB_PASSWORD=$5
+    MACHINES=$1
+    SUDOPASS=$2
+    MARIADB_USERNAME=$3
+    MARIADB_PASSWORD=$4
     MYSQL="/usr/bin/mysql"
     LOCAL_BACKUP_DIR="/var/backups"
     DATE=$(date +%Y%m%d)
@@ -51,8 +57,8 @@ Backup_BDD()
 
 Backup_WEB()
 {
-    WEB_MACHINES=$(./get_machines.sh web)    
-    SUDOPASS=$3
+    WEB_MACHINES=$1
+    SUDOPASS=$2
     MYSQL="/usr/bin/mysql"
     LOCAL_BACKUP_DIR="/var/backups"
     DATE=$(date +%Y%m%d)
@@ -79,7 +85,39 @@ Backup_WEB()
     done
 }
 
-Backup_WEB
-Backup_BDD
+# Check if the user has provided minimum 1 argument
+if [ $# -eq 0 ]; then
+    help
+    exit 1
+fi
 
-echo "Fin de la sauvegarde"
+
+case $1 in
+    "web")
+        WEB_MACHINES=$(./get_machines.sh web)
+
+        if [ -z "$WEB_MACHINES" ]; then
+            echo "No web machines found exiting"
+            exit 1
+        fi
+
+        SUDOPASS=$(whiptail --passwordbox "Please enter your root password" 8 78 --title "Root Password" 3>&1 1>&2 2>&3)
+
+        Backup_WEB "$WEB_MACHINES" "$SUDOPASS"
+        ;;
+    "bdd")
+        BDD_MACHINES=$(./get_machines.sh bdd)
+
+        if [ -z "$BDD_MACHINES" ]; then
+            echo "No web machines found exiting"
+            exit 1
+        fi
+
+        SUDOPASS=$(whiptail --passwordbox "Please enter your root password" 8 78 --title "Root Password" 3>&1 1>&2 2>&3)
+        
+        BDD_USERNAME=$(whiptail --inputbox "Please enter your DB username" 8 78 --title "Username" 3>&1 1>&2 2>&3)
+        BDD_PASSWORD=$(whiptail --passwordbox "Please enter your DB password" 8 78 --title "Password" 3>&1 1>&2 2>&3)
+
+        Backup_BDD "$BDD_MACHINES" "$SUDOPASS" "$BDD_USERNAME" "BDD_PASSWORD"
+        ;;
+esac
