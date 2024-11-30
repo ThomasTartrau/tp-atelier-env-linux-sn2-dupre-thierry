@@ -51,6 +51,16 @@ Backup_BDD()
 
 Backup_Web()
 {
+     if [ -z "$WEB_MACHINES" ]; then
+        echo "No web machines found exiting"
+        exit 1
+    fi
+
+    if [ -z "$SUDOPASS" ]; then
+        echo "No root password found exiting"
+        exit 1
+    fi
+
     WEB_MACHINES=$2
     SUDOPASS=$3
     MYSQL="/usr/bin/mysql"
@@ -69,7 +79,7 @@ Backup_Web()
     done
 }
 
-
-backup_remote
+Backup_Web
+Backup_BDD
 
 echo "Fin de la sauvegarde"
