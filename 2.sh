@@ -3,6 +3,10 @@
 # Local ssh public key
 LOCAL_SSH_PUBLIC_KEY="~/.ssh/id_ed25519.pub"
 
+WEB_MACHINES=$(./get_machines.sh web)
+BDD_MACHINES=$(./get_machines.sh bdd)
+
+
 Backup_BDD()
 {
     BDD_MACHINES=$1
