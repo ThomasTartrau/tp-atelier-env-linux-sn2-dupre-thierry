@@ -3,13 +3,9 @@
 # Local ssh public key
 LOCAL_SSH_PUBLIC_KEY="~/.ssh/id_ed25519.pub"
 
-WEB_MACHINES=$(./get_machines.sh web)
-BDD_MACHINES=$(./get_machines.sh bdd)
-
-
 Backup_BDD()
 {
-    BDD_MACHINES=$1
+    BDD_MACHINES=$(./get_machines.sh bdd)
     SUDOPASS=$3
     MARIADB_USERNAME=$4
     MARIADB_PASSWORD=$5
@@ -53,9 +49,16 @@ Backup_BDD()
     done
 }
 
-Backup_Web()
+Backup_WEB()
 {
-     if [ -z "$WEB_MACHINES" ]; then
+    WEB_MACHINES=$(./get_machines.sh web)    
+    SUDOPASS=$3
+    MYSQL="/usr/bin/mysql"
+    LOCAL_BACKUP_DIR="/var/backups"
+    DATE=$(date +%Y%m%d)
+    BACKUP_DIRS=("/var/www/html" "/var/lib/mysql" "/etc/apache2")
+
+    if [ -z "$WEB_MACHINES" ]; then
         echo "No web machines found exiting"
         exit 1
     fi
@@ -64,13 +67,6 @@ Backup_Web()
         echo "No root password found exiting"
         exit 1
     fi
-
-    WEB_MACHINES=$2
-    SUDOPASS=$3
-    MYSQL="/usr/bin/mysql"
-    LOCAL_BACKUP_DIR="/var/backups"
-    DATE=$(date +%Y%m%d)
-    BACKUP_DIRS=("/var/www/html" "/var/lib/mysql" "/etc/apache2")
 
     for MACHINE in $WEB_MACHINES; do
         # Creation of Backups dirs
@@ -83,7 +79,7 @@ Backup_Web()
     done
 }
 
-Backup_Web
+Backup_WEB
 Backup_BDD
 
 echo "Fin de la sauvegarde"
