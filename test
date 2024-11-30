@@ -1,0 +1,22 @@
+PUBLIC_WEB_IP="192.168.121.3"
+    PRIVATE_WEB_IP="192.168.56.10"
+    WEB_USERNAME="john"
+
+    PUBLIC_BDD_IP="192.168.121.81"
+    PRIVATE_BDD_IP="192.168.56.11"
+    BDD_USERNAME="john"
+
+    # Répertoires à sauvegarder
+    BACKUP_DIRS=("/var/www/html" "/var/lib/mysql" "/etc/apache2")
+    # Répertoire de sauvegarde
+    LOCAL_BACKUP_DIR="/var/backups"
+
+    # Informations pour la base de données
+    MARIADB_USERNAME="web"
+    MARIADB_PASSWORD="password"
+
+    # Mot de passe pour sudo
+    SUDOPASS="root"
+
+    IS_VAGRANT=true
+    DATE=$(date +%Y%m%d)  # Définition de la date
